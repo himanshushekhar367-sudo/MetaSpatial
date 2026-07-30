@@ -1,0 +1,26 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.ipynb_checkpoints/
+training_ready/
+sma_h5ad/
+*.h5ad
+*.pkl
+!metaspatial_model.pkl
+.DS_Store
+
+# run outputs (CLI tools write here)
+/metabolic/
+/pathways/
+/results/
+
+# --- excluded from the public tool repo ---
+reproduce/figures/
+manuscript/
+results/
+metabolic/
+pathways/
+desium_model.pkl
+metaspatial_names.py
+__pycache__/
+*.pyc

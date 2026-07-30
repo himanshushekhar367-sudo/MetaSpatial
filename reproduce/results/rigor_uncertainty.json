@@ -1,0 +1,9 @@
+{
+  "epistemic_id": 0.08191340416669846,
+  "epistemic_ood": 0.32645973563194275,
+  "epistemic_ratio": 3.9854249954223633,
+  "aleatoric_spearman": 0.3835109146780148,
+  "coverage_id": 0.9114416666666667,
+  "coverage_ood": 0.13669425511197664,
+  "held": "LC_170"
+}

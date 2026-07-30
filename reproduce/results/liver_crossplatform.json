@@ -1,0 +1,32 @@
+{
+  "normal(ac)": {
+    "n_maldi": 600,
+    "mz_range": [
+      328.05999755859375,
+      1180.8900146484375
+    ],
+    "matched_desi": 78,
+    "annotated": 10,
+    "lipid_class_hits": 9,
+    "top_classes": {
+      "phospholipid": 8,
+      "peptide/redox": 1,
+      "sphingolipid": 1
+    }
+  },
+  "cirrhosis(hc)": {
+    "n_maldi": 600,
+    "mz_range": [
+      328.05999755859375,
+      1314.97998046875
+    ],
+    "matched_desi": 39,
+    "annotated": 6,
+    "lipid_class_hits": 5,
+    "top_classes": {
+      "phospholipid": 4,
+      "peptide/redox": 1,
+      "sphingolipid": 1
+    }
+  }
+}
