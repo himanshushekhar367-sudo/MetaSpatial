@@ -27,7 +27,7 @@ MetaSpatial learns a **gene → metabolite** map from paired tissue sections and
 Spatial transcriptomics is abundant; spatial metabolomics is scarce and hard to acquire. Existing tools only *correlate* the two modalities where both were measured — they cannot be applied to the thousands of transcriptome‑only sections where a metabolic readout is actually needed. MetaSpatial is, to our knowledge, the first tool that **predicts** metabolite abundances from transcriptome alone.
 
 - **Predicts** a full per‑spot metabolite (m/z) profile from gene expression + coordinates.
-- **Knows when it is wrong** — split‑conformal per‑metabolite intervals plus an epistemic out‑of‑distribution flag that localises where predictions should not be trusted.
+- **Reports its uncertainty** — the shipped model carries split‑conformal per‑metabolite interval widths (attached to the query as `.uns['metaspatial_conf_width']`), and every prediction records the query‑vs‑training gene‑panel overlap (`model.last_gene_overlap_`) as a species/panel out‑of‑distribution guard.
 - **Honest about what is predictable** — accuracy is chemical‑class dependent (structural lipids and nucleotides are recoverable; fast‑turnover polar metabolites such as lactate are not), and the model reports this per ion rather than hiding it in an average.
 - **Python and R** — one pickled model, called from either language, with byte‑identical results.
 - **Lightweight** — CPU‑only `scikit‑learn`; trains and predicts in seconds to minutes.
@@ -48,7 +48,15 @@ pip install -e .
 # option B — pip only
 pip install -r requirements.txt
 pip install -e .
+
+# option C — reproduce byte-identically (pinned versions the shipped model was built with)
+pip install -r requirements-lock.txt
+pip install -e .
 ```
+
+> For results that match the paper exactly, install from `requirements-lock.txt` (option C). The shipped
+> `metaspatial_model.pkl` was pickled under the versions pinned there; loading under other versions still
+> works but may emit a scikit‑learn `InconsistentVersionWarning`.
 
 Python ≥ 3.9, CPU only (no GPU). For the R interface, install [`reticulate`](https://rstudio.github.io/reticulate/) and point it at the same environment.
 
