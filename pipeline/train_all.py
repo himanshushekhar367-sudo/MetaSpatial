@@ -8,7 +8,7 @@ within-cohort and leave-one-sample-out accuracy so you can watch the transfer nu
 as more data is added.
 
 USAGE:
-    python train_all.py "C:\\Users\\pc\\Desktop\\spatial metabolism"
+    python train_all.py "/path/to/data"
 
 Requires metaspatial.py in the same folder (ships alongside this script), plus:
     pip install scanpy anndata scikit-learn scipy pandas numpy

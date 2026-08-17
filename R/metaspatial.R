@@ -9,7 +9,7 @@
 #   3) model <- ms_load_model("<full path>/metaspatial_model.pkl"); ms_run_rds(...)
 #   If you see "another version of Python has already been initialized", restart R and re-source.
 # ------------------------------------------------------------------------------------
-REPO_DIR <- "C:/Users/pc/Desktop/spatial metabolism/MetaSpatial"  # folder that CONTAINS metaspatial/
+REPO_DIR <- "."  # folder that CONTAINS metaspatial/
 PY_ENV   <- ""     # OPTIONAL dedicated env name; "" = use reticulate's default (recommended)
 PYTHON   <- ""     # OPTIONAL full path to python.exe; "" = use active/default env
 USE_CONDA <- FALSE # only used if PY_ENV set AND Python not yet initialized
@@ -274,8 +274,8 @@ ms_run_rds <- function(in_rds, model, out_rds = NULL, assay = "RNA") {
 
 # =====================================================================================
 # EXAMPLE (full paths)
-# model <- ms_load_model("C:/Users/pc/Desktop/spatial metabolism/MetaSpatial/metaspatial_model.pkl")
-# obj   <- ms_run_rds("C:/Users/pc/Desktop/spatial metabolism/HCC-2-expr.RDS", model,
+# model <- ms_load_model("metaspatial_model.pkl")
+# obj   <- ms_run_rds("your_section.RDS", model,
 #                     out_rds = "HCC-2_with_metaspatial.RDS")   # section-aware; recovers the N->PVTT gradient
 #
 # ## work by COMMON NAME instead of raw m/z -------------------------------------------

@@ -14,7 +14,7 @@ also proves the join is real). Sections are grouped by metabolite panel (DHB-lip
 common m/z axis so they pool for leave-one-section-out.
 
 USAGE:
-    python sma_to_metaspatial.py "C:\\Users\\pc\\Desktop\\spatial metabolism\\SMA"
+    python sma_to_metaspatial.py "/path/to/SMA"
     (point at the folder that contains the 'sma' tree; outputs go to <that>\\..\\sma_h5ad\\
      ONE LEVEL UP so the main folder's metaspatial_all_in_one.py auto-discovers them)
 

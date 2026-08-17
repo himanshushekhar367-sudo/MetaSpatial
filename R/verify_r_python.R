@@ -5,7 +5,7 @@
 #
 # Prereq: edit REPO_DIR at the top of metaspatial.R to your MetaSpatial folder, then run this.
 # =====================================================================================
-SP <- "C:/Users/pc/Desktop/spatial metabolism"
+SP <- "/path/to/data"
 source(file.path(SP, "MetaSpatial/R/metaspatial.R"))
 
 ## load the CANONICAL model (fixed predict path) and re-predict HCC-2

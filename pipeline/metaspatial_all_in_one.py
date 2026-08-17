@@ -5,7 +5,7 @@ MetaSpatial - all-in-one: inventory + train on EVERY paired section + leave-one-
 HOW TO USE (no download needed - just copy this whole file):
   1) Save this text as a file named:  metaspatial_all_in_one.py
   2) Install deps once:   pip install scanpy anndata scikit-learn scipy pandas numpy
-  3) Run:                 python metaspatial_all_in_one.py "C:\\Users\\pc\\Desktop\\spatial metabolism"
+  3) Run:                 python metaspatial_all_in_one.py "/path/to/data"
      (optional KEGG prior, matches the paper's best result - put scMetab_KEGG.gmt in the folder)
   4) Paste the ===== SUMMARY ===== block back to me.
 

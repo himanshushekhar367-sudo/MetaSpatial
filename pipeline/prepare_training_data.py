@@ -7,7 +7,7 @@ into MetaSpatial's training format, and deep-inspect anything not yet ingestible
 finalise its loader.
 
 USAGE (Windows PowerShell / any terminal):
-    python prepare_training_data.py "C:\\Users\\pc\\Desktop\\spatial metabolism"
+    python prepare_training_data.py "/path/to/data"
 
 Then paste the ===== SUMMARY ===== block back to me.
 
