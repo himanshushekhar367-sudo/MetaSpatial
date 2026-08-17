@@ -14,13 +14,14 @@ sma_h5ad/
 /pathways/
 /results/
 
-# --- excluded from the public tool repo ---
-reproduce/figures/
+# --- excluded from the public tool repo (paper analysis, personal outputs, build scripts) ---
+reproduce/
 manuscript/
 results/
 metabolic/
 pathways/
 desium_model.pkl
 metaspatial_names.py
+CLEANUP_AND_PUBLISH.ps1
 __pycache__/
 *.pyc
