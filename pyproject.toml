@@ -17,3 +17,6 @@ Homepage = "https://github.com/himanshushekhar367-sudo/MetaSpatial"
 
 [tool.setuptools]
 packages = ["metaspatial"]
+
+[tool.setuptools.package-data]
+metaspatial = ["data/genesets/*.gmt"]

@@ -60,7 +60,27 @@ def test_train_save_load_roundtrip(tmp_path=None):
     assert (p1 >= 0).all()
 
 
+def test_kegg_human_map_autoloads():
+    """use_kegg=True must auto-load the shipped human KEGG map (no path) and train/predict."""
+    import anndata as ad, numpy as np
+    def paired(nspots, seed):
+        rr = np.random.RandomState(seed)
+        a = ad.AnnData(X=np.log1p(rr.gamma(1, 1, (nspots, 300)).astype(np.float32)))
+        a.var_names = [f"G{i}" for i in range(300)]; a.layers["log1p"] = a.X
+        a.obsm["spatial"] = rr.rand(nspots, 2) * 50
+        a.uns["msi"] = rr.gamma(1, 1, (nspots, 30)).astype(np.float32)
+        a.uns["mz_features"] = np.linspace(100, 900, 30)
+        return a
+    tr = [paired(120, s) for s in range(2)]
+    m = MetaSpatial(n_hvg=100, use_kegg=True).fit(tr)
+    assert len(m.kegg) > 50, "shipped human KEGG map did not auto-load with use_kegg=True"
+    assert m.kegg_gmt_ is not None and str(m.kegg_gmt_).endswith(".gmt")
+    p = m.predict_metabolome(paired(80, 99))
+    assert p.shape[1] == len(m.mz_) and (p >= 0).all()
+
+
 if __name__ == "__main__":
     test_shipped_model_loads_and_predicts()
     test_train_save_load_roundtrip()
+    test_kegg_human_map_autoloads()
     print("ALL SMOKE TESTS PASSED")

@@ -120,6 +120,27 @@ Gene expression is reduced to principal components, then augmented with **transp
 
 The central empirical finding is a **map of predictability**: which parts of the metabolome are recoverable from transcription (structural lipids, nucleotides, locally‑synthesised neurotransmitters) versus which are not (fast‑flux polar metabolites), reproduced across two ionisation platforms (DESI‑MSI and MALDI‑MSI) and two species.
 
+### Human metabolic map (KEGG prior)
+
+The model can be augmented with an explicit **human metabolic map** — 85 KEGG metabolic pathways over ~1,700 human gene symbols (`data/genesets/scMetab_KEGG.gmt`, shipped with the repo). With `use_kegg=True` the map loads automatically (no path needed): per‑pathway activity scores (mean‑z of member genes, plus one neighbourhood‑diffused copy) are concatenated to the transport features, so the ridge sees explicit gene→metabolite biosynthetic signals rather than only correlational principal components.
+
+```python
+model = MetaSpatial(use_kegg=True).fit(train_adatas)   # zero-config human KEGG prior
+```
+
+In a leave‑one‑section‑out benchmark on the 7‑section DESIUM cohort, the prior gives a **small but consistent** lift, concentrated where biosynthetic constraint is tightest:
+
+| metabolite class | Spearman ρ, no prior | Spearman ρ, +KEGG | Δ |
+|---|---|---|---|
+| all ions (n=2086) | +0.067 | +0.079 | **+0.012** |
+| nucleotides (n=9) | +0.148 | +0.170 | +0.022 |
+| lipids (n=12) | +0.072 | +0.089 | +0.017 |
+| fast‑flux polar (n=19) | +0.064 | +0.070 | +0.006 |
+
+61% of ions improve; the gain is largest for nucleotides and lipids and smallest for fast‑flux polar species — the prior sharpens the predictability boundary rather than uniformly inflating scores. The **shipped `metaspatial_model.pkl` is trained without the prior** (`use_kegg=False`) so it reproduces the manuscript figures byte‑identically; `use_kegg=True` is an opt‑in you retrain for your own tissue.
+
+Because MetaSpatial also predicts measured metabolites, the same map supports **metabolite‑grounded pathway activity** (`metaspatial.MetabolicActivity`): a pathway scores high only where its enzymes *and* its predicted metabolites agree, and each pathway is ranked by enzyme–metabolite spatial coherence (on DESIUM, *Biosynthesis of unsaturated fatty acids* ranks top at ρ≈0.30) — a confidence signal enzyme‑only tools (scMetabolism, AUCell) cannot provide.
+
 ## Datasets
 
 MetaSpatial is validated on public paired data — see [`data/README.md`](data/README.md) for download instructions.

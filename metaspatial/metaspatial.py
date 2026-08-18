@@ -13,11 +13,30 @@ the training per-gene mean, so they contribute exactly zero after PCA centring. 
 intensities (non-negative). Split-conformal per-metabolite interval widths, when estimated at fit time,
 are attached to the query as .uns['metaspatial_conf_width'].
 """
+import os
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.linear_model import Ridge
 from scipy.spatial import cKDTree
 from scipy.sparse import csr_matrix, diags, eye
+
+
+def _default_kegg_gmt():
+    """Locate the human KEGG metabolic gene sets shipped with the repo (85 metabolic
+    pathways, ~1.7k human gene symbols). Returns a path or None. Works for editable
+    installs (repo layout) and for the packaged data dir; env override MS_KEGG_GMT wins."""
+    env = os.environ.get("MS_KEGG_GMT")
+    if env and os.path.exists(env):
+        return env
+    here = os.path.dirname(os.path.abspath(__file__))
+    for cand in (
+        os.path.join(here, "data", "genesets", "scMetab_KEGG.gmt"),          # packaged inside the module
+        os.path.join(here, "..", "data", "genesets", "scMetab_KEGG.gmt"),     # repo root (editable install)
+        os.path.join(os.getcwd(), "data", "genesets", "scMetab_KEGG.gmt"),    # run from repo root
+    ):
+        if os.path.exists(cand):
+            return os.path.normpath(cand)
+    return None
 
 
 def _norm_adj(coords, groups=None, k=6):
@@ -50,7 +69,15 @@ class MetaSpatial:
         self.n_hvg, self.n_pcs, self.alpha, self.k = n_hvg, n_pcs, alpha, k
         self.use_kegg = use_kegg
         self.extra_key = extra_key   # optional per-spot modality in adata.obsm (e.g. antibody-derived protein); concatenated to features
-        self.kegg = self._load_gmt(kegg_gmt) if (use_kegg and kegg_gmt) else {}
+        # Human metabolic map: when use_kegg=True and no explicit .gmt is given, fall back to the
+        # shipped human KEGG metabolic gene sets so the flag is zero-config (not silently inert).
+        gmt = kegg_gmt or (_default_kegg_gmt() if use_kegg else None)
+        self.kegg_gmt_ = gmt
+        self.kegg = self._load_gmt(gmt) if (use_kegg and gmt) else {}
+        if use_kegg and not self.kegg:
+            import warnings
+            warnings.warn("use_kegg=True but no KEGG gene sets could be loaded "
+                          "(set kegg_gmt=... or MS_KEGG_GMT); pathway features are disabled.")
         self.last_gene_overlap_ = float("nan")   # set on every predict_metabolome call
         self.conf_width_ = None                  # per-metabolite conformal interval half-width (if estimated)
 
@@ -129,8 +156,8 @@ class MetaSpatial:
         if len(adatas) < 2:
             self.conf_width_ = None; return self
         cal = MetaSpatial(self.n_hvg, self.n_pcs, self.alpha, self.k, self.use_kegg,
-                          None, self.extra_key)
-        cal.kegg = self.kegg
+                          self.kegg_gmt_, self.extra_key)
+        cal.kegg = self.kegg   # reuse the exact same gene sets
         cal.fit(adatas[:-1], metab_key=metab_key)
         held = adatas[-1]
         pred = cal.predict_metabolome(held.copy())
