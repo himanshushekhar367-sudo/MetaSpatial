@@ -19,6 +19,10 @@ and how it fails. Read this before applying it to your data.
 - **Optional extra modalities:** `MetaSpatial(extra_key=...)` can append co-measured per-spot covariates
   such as cheap H&E patch features from `add_histology_features()`. The shipped model does **not** use
   histology; H&E support is for retraining and ablation studies.
+- **Experimental morphology-only companion:** `MorphologyMetabolitePredictor` can train a separate
+  H&E-only model on paired sections that already carry histology features and MSI targets, then predict
+  from histology alone. This is not the shipped predictor and should be treated as coherence-level
+  hypothesis generation, not measured metabolomics.
 - **Version:** `metaspatial-unified-1`. Pickled under the versions in `requirements-lock.txt`; loading
   under other scikit-learn versions works but may emit an `InconsistentVersionWarning`.
 
@@ -36,6 +40,9 @@ and how it fails. Read this before applying it to your data.
 - **Cross-sample / cross-tissue transfer is weak** (leave-one-sample-out median ≈ 0.03 on the DESI tumour
   panel). The model transfers the *within-section* gene→metabolite relationship, not a section's absolute
   metabolite pattern. Treat cross-cohort predictions as demonstrations, not measurements.
+- **Morphology-only outputs are experimental.** H&E-only prediction captures spatial morphology that can
+  transfer across sections and cohorts, but it was validated externally only by directional biological
+  coherence without measured MSI. Do not use it as a quantitative metabolomics readout.
 - **Low gene-panel overlap** with the training genes → extrapolation; `last_gene_overlap_` warns below ~0.5.
 - **Non-human tissue** without ortholog symbol mapping: gene symbols will not match; predictions degrade.
   Retrain per species/panel (see `pipeline/` and `reproduce/sma_desium_benchmark.py`).

@@ -3,7 +3,7 @@ and a from-scratch train->save->load cycle must round-trip. Run: pytest -q  (or 
 import os, sys, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import anndata as ad
-from metaspatial import MetaSpatial, add_histology_features
+from metaspatial import MetaSpatial, MorphologyMetabolitePredictor, add_histology_features
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PKL = os.path.join(REPO, "metaspatial_model.pkl")
@@ -99,9 +99,34 @@ def test_histology_features_from_embedded_visium_image():
     assert a.uns["histology_source"]["library_id"] == "lib1"
 
 
+def test_morphology_predictor_train_predict_roundtrip():
+    rng = np.random.RandomState(4)
+
+    def paired(nspots, seed):
+        rr = np.random.RandomState(seed)
+        a = ad.AnnData(X=np.ones((nspots, 2), np.float32))
+        a.var_names = ["G1", "G2"]
+        a.obsm["histology"] = rr.normal(size=(nspots, 13)).astype(np.float32)
+        a.uns["msi"] = rr.gamma(1.0, 1.0, size=(nspots, 9)).astype(np.float32)
+        a.uns["mz_features"] = np.linspace(100, 300, 9)
+        return a
+
+    train = [paired(30, 10), paired(35, 11)]
+    query = ad.AnnData(X=np.ones((12, 2), np.float32))
+    query.var_names = ["G1", "G2"]
+    query.obsm["histology"] = rng.normal(size=(12, 13)).astype(np.float32)
+    m = MorphologyMetabolitePredictor().fit(train)
+    pred = m.predict_from_histology(query)
+    assert pred.shape == (query.n_obs, 9)
+    assert "metaspatial_he_pred" in query.obsm
+    assert np.isfinite(pred).all()
+    assert (pred >= 0).all()
+
+
 if __name__ == "__main__":
     test_shipped_model_loads_and_predicts()
     test_train_save_load_roundtrip()
     test_kegg_human_map_autoloads()
     test_histology_features_from_embedded_visium_image()
+    test_morphology_predictor_train_predict_roundtrip()
     print("ALL SMOKE TESTS PASSED")

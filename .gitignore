@@ -19,6 +19,7 @@ sma_h5ad/
 !/reproduce/flux_validation.py
 !/reproduce/sma_desium_benchmark.py
 !/reproduce/histology_ablation.py
+!/reproduce/histology_only_ablation.py
 manuscript/
 results/
 metabolic/

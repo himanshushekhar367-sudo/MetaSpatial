@@ -131,6 +131,33 @@ python reproduce/histology_ablation.py --data /path/to/DESIUM/Correlation_NMF_an
 
 The helper deliberately uses only auditable patch statistics (RGB/optical-density/texture/tissue fraction), not a heavy foundation model. Sections whose embedded image cannot be safely matched to `obs['orig.ident']` are skipped rather than sampled from the wrong slide.
 
+An experimental morphology-only companion is also available for research
+controls:
+
+```python
+from metaspatial import MorphologyMetabolitePredictor
+
+he_model = MorphologyMetabolitePredictor().fit(paired_sections_with_histology)
+pred = he_model.predict_from_histology(query_with_histology)
+```
+
+This path uses H&E features alone, with no gene expression at prediction time.
+It is not the shipped MetaSpatial model and should be interpreted as a
+coherence-level morphology signal, not measured metabolomics. In DESIUM
+controls, H&E-only cross-section transfer was real by shuffle control and
+competitive with transcriptome-only, while within-section prediction still
+favoured transcriptome. In an external HCC H&E cohort without MSI supervision,
+the morphology-only model matched 20/28 expected Normal-to-Tumour directional
+changes across four patients, compared with 18/28 for the transcriptome model.
+Use this as an experimental companion, not a clinical or quantitative assay.
+The controls are scripted as:
+
+```bash
+python reproduce/histology_only_ablation.py --data /path/to/DESIUM/Correlation_NMF_analysis/data --test loso
+python reproduce/histology_only_ablation.py --data /path/to/DESIUM/Correlation_NMF_analysis/data --test shuffle
+python reproduce/histology_only_ablation.py --data /path/to/DESIUM/Correlation_NMF_analysis/data --test within
+```
+
 To train MetaSpatial on **your own** paired MSI + transcriptomics instead of using the shipped model:
 
 ```python

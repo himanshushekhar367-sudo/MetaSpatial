@@ -125,6 +125,34 @@ If you also have a per-spot modality on the same spots (e.g. antibody-derived pr
 model = MetaSpatial(use_kegg=True, extra_key="protein").fit(train)
 ```
 
+**Experimental H&E-only companion**
+
+For research controls, you can train a separate morphology-only model on paired
+sections that already contain `adata.obsm["histology"]` and `.uns["msi"]`, then
+predict on H&E features alone:
+
+```python
+from metaspatial import MorphologyMetabolitePredictor
+
+he_model = MorphologyMetabolitePredictor().fit(train_with_histology)
+pred = he_model.predict_from_histology(query_with_histology)
+```
+
+This is deliberately separate from `MetaSpatial`: it does not use gene
+expression at prediction time, and it is labelled experimental. Treat outputs as
+directional morphology-metabolite coherence, not measured or clinically
+actionable metabolomics. For multi-condition H&E cohorts, build all query
+histology features together so the model standardizes across the full query and
+preserves between-condition contrast.
+
+The DESIUM controls used for this experimental mode are runnable as:
+
+```bash
+python reproduce/histology_only_ablation.py --data /path/to/DESIUM/Correlation_NMF_analysis/data --test loso
+python reproduce/histology_only_ablation.py --data /path/to/DESIUM/Correlation_NMF_analysis/data --test shuffle
+python reproduce/histology_only_ablation.py --data /path/to/DESIUM/Correlation_NMF_analysis/data --test within
+```
+
 ---
 
 ## Metabolic pathway activity (a spatially-aware scMetabolism)
