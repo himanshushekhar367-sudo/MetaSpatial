@@ -3,7 +3,7 @@ and a from-scratch train->save->load cycle must round-trip. Run: pytest -q  (or 
 import os, sys, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import anndata as ad
-from metaspatial import MetaSpatial
+from metaspatial import MetaSpatial, add_histology_features
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PKL = os.path.join(REPO, "metaspatial_model.pkl")
@@ -79,8 +79,29 @@ def test_kegg_human_map_autoloads():
     assert p.shape[1] == len(m.mz_) and (p >= 0).all()
 
 
+def test_histology_features_from_embedded_visium_image():
+    rng = np.random.RandomState(3)
+    a = ad.AnnData(X=np.ones((4, 3), np.float32))
+    a.var_names = ["G1", "G2", "G3"]
+    a.obs["orig.ident"] = ["lib1"] * a.n_obs
+    a.obsm["spatial"] = np.array([[10, 10], [20, 20], [30, 30], [40, 40]], dtype=float)
+    img = rng.rand(80, 80, 3).astype(np.float32)
+    a.uns["spatial"] = {
+        "lib1": {
+            "images": {"hires": img},
+            "scalefactors": {"tissue_hires_scalef": 1.0, "spot_diameter_fullres": 8.0},
+        }
+    }
+    add_histology_features(a)
+    assert "histology" in a.obsm
+    assert a.obsm["histology"].shape == (a.n_obs, 13)
+    assert np.isfinite(a.obsm["histology"]).all()
+    assert a.uns["histology_source"]["library_id"] == "lib1"
+
+
 if __name__ == "__main__":
     test_shipped_model_loads_and_predicts()
     test_train_save_load_roundtrip()
     test_kegg_human_map_autoloads()
+    test_histology_features_from_embedded_visium_image()
     print("ALL SMOKE TESTS PASSED")

@@ -115,6 +115,22 @@ Treat a prediction as **usable** (not just hypothesis‑generating) only when **
 
 Outputs are **2,086 m/z ion channels, not confirmed named metabolites** — exact‑mass annotations are putative and should be treated as hypotheses until MS/MS or FDR‑controlled annotation (e.g. METASPACE) confirms them. Cross‑tissue/cross‑sample transfer is weak by design (see the model card); MetaSpatial predicts *within‑domain, spatially‑structured, transcriptionally‑programmed* metabolite classes, not universal metabolomics.
 
+### Optional H&E features
+
+MetaSpatial is transcriptome‑only by default, but the model can test whether co‑registered histology adds signal through `extra_key`. For Visium-style `.h5ad` files that carry embedded tissue images in `adata.uns['spatial']`, attach cheap per‑spot H&E features first:
+
+```bash
+python examples/add_histology_features.py --query paired_section.h5ad --out paired_section_he.h5ad
+```
+
+Then train with `MetaSpatial(extra_key="histology")`. The paper-facing ablation is:
+
+```bash
+python reproduce/histology_ablation.py --data /path/to/DESIUM/Correlation_NMF_analysis/data --protocol loso
+```
+
+The helper deliberately uses only auditable patch statistics (RGB/optical-density/texture/tissue fraction), not a heavy foundation model. Sections whose embedded image cannot be safely matched to `obs['orig.ident']` are skipped rather than sampled from the wrong slide.
+
 To train MetaSpatial on **your own** paired MSI + transcriptomics instead of using the shipped model:
 
 ```python

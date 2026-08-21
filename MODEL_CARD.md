@@ -16,6 +16,9 @@ and how it fails. Read this before applying it to your data.
 - **Uncertainty:** split-conformal per-ion interval widths (`.uns['metaspatial_conf_width']`), an
   overlap-adaptive widened width (`.uns['metaspatial_conf_width_adj']`), and a per-prediction
   gene-panel overlap (`model.last_gene_overlap_`). A per-ion `reliability_table()` reports trust tiers.
+- **Optional extra modalities:** `MetaSpatial(extra_key=...)` can append co-measured per-spot covariates
+  such as cheap H&E patch features from `add_histology_features()`. The shipped model does **not** use
+  histology; H&E support is for retraining and ablation studies.
 - **Version:** `metaspatial-unified-1`. Pickled under the versions in `requirements-lock.txt`; loading
   under other scikit-learn versions works but may emit an `InconsistentVersionWarning`.
 

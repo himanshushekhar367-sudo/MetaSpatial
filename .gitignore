@@ -15,7 +15,10 @@ sma_h5ad/
 /results/
 
 # --- excluded from the public tool repo (paper analysis, personal outputs, build scripts) ---
-reproduce/
+/reproduce/*
+!/reproduce/flux_validation.py
+!/reproduce/sma_desium_benchmark.py
+!/reproduce/histology_ablation.py
 manuscript/
 results/
 metabolic/
