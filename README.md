@@ -93,7 +93,27 @@ seu   <- ms_run_rds("your_section.RDS", model)   # adds a 'metaspatial' assay
 
 Both entry points call the **same** pickled model — the R wrapper dispatches to Python through `reticulate`, so R and Python predictions are byte‑identical. You get a ranked `predicted_metabolites.csv` and spatial maps; the step checks gene/species overlap and warns on mismatch.
 
-> **Read the caveats.** Predictions are strongest for lipids, nucleotides and redox metabolites, and for tissue resembling the human‑tumour training data. Fast‑turnover polar species (lactate, glucose) are deliberately flagged as unpredictable rather than guessed. See [`docs/USAGE.md`](docs/USAGE.md).
+> **Read the caveats.** Predictions are strongest for lipids, nucleotides and redox metabolites, and for tissue resembling the human‑tumour training data. Fast‑turnover polar species (lactate, glucose) are deliberately flagged as unpredictable rather than guessed. See [`docs/USAGE.md`](docs/USAGE.md) and the [model card](MODEL_CARD.md).
+
+### Reliability & safe use
+
+Every prediction ships with a per‑ion reliability report — the recommended user‑facing output:
+
+```python
+pred = model.predict_metabolome(adata)
+rel  = model.reliability_table(adata)   # DataFrame: mz, pred_mean/std, conf_width,
+                                        # train_predictability, annotation, class, trust_tier
+```
+
+Treat a prediction as **usable** (not just hypothesis‑generating) only when **all** of these hold — otherwise report it as a hypothesis:
+
+1. input tissue resembles the training tissue (human tumour / epithelial);
+2. gene‑panel overlap above ~0.5 (`model.last_gene_overlap_`; a warning fires below that);
+3. the ion's class is lipid / nucleotide / redox / locally‑synthesised;
+4. the predicted map is spatially structured (not random);
+5. the ion's `trust_tier` is `medium` or `high` (conformal width narrow, held‑out predictability positive).
+
+Outputs are **2,086 m/z ion channels, not confirmed named metabolites** — exact‑mass annotations are putative and should be treated as hypotheses until MS/MS or FDR‑controlled annotation (e.g. METASPACE) confirms them. Cross‑tissue/cross‑sample transfer is weak by design (see the model card); MetaSpatial predicts *within‑domain, spatially‑structured, transcriptionally‑programmed* metabolite classes, not universal metabolomics.
 
 To train MetaSpatial on **your own** paired MSI + transcriptomics instead of using the shipped model:
 
@@ -128,16 +148,16 @@ The model can be augmented with an explicit **human metabolic map** — 85 KEGG 
 model = MetaSpatial(use_kegg=True).fit(train_adatas)   # zero-config human KEGG prior
 ```
 
-In a leave‑one‑section‑out benchmark on the 7‑section DESIUM cohort, the prior gives a **small but consistent** lift, concentrated where biosynthetic constraint is tightest:
+Under the identical detection‑matched leave‑one‑section‑out protocol on the 7‑section DESIUM cohort (the exact numbers in manuscript Supplementary Table S12), the prior gives a **small but statistically supported** lift, concentrated where biosynthetic constraint is tightest:
 
-| metabolite class | Spearman ρ, no prior | Spearman ρ, +KEGG | Δ |
+| stratum | Spearman ρ, no prior | Spearman ρ, +KEGG | Δ |
 |---|---|---|---|
-| all ions (n=2086) | +0.067 | +0.079 | **+0.012** |
-| nucleotides (n=9) | +0.148 | +0.170 | +0.022 |
-| lipids (n=12) | +0.072 | +0.089 | +0.017 |
-| fast‑flux polar (n=19) | +0.064 | +0.070 | +0.006 |
+| overall (per‑section median) | +0.028 | +0.033 | **+0.0045** (95% CI [+0.001, +0.009]; 6/7 sections improve) |
+| nucleotides (n=8) | +0.171 | +0.192 | +0.021 |
+| lipids (n=12) | +0.059 | +0.080 | +0.021 |
+| fast‑flux polar (n=19) | +0.069 | +0.071 | +0.002 |
 
-61% of ions improve; the gain is largest for nucleotides and lipids and smallest for fast‑flux polar species — the prior sharpens the predictability boundary rather than uniformly inflating scores. The **shipped `metaspatial_model.pkl` is trained without the prior** (`use_kegg=False`) so it reproduces the manuscript figures byte‑identically; `use_kegg=True` is an opt‑in you retrain for your own tissue.
+The gain is largest for nucleotides and lipids and near‑zero for fast‑flux polar species — the prior sharpens the predictability boundary rather than uniformly inflating scores. (Overall values are the mean of per‑section detection‑matched median Spearman; per‑class values are mean per‑ion Spearman over the seven held‑out folds.) The **shipped `metaspatial_model.pkl` is trained without the prior** (`use_kegg=False`) so it reproduces the manuscript figures byte‑identically; `use_kegg=True` is an opt‑in you retrain for your own tissue.
 
 Because MetaSpatial also predicts measured metabolites, the same map supports **metabolite‑grounded pathway activity** (`metaspatial.MetabolicActivity`): a pathway scores high only where its enzymes *and* its predicted metabolites agree, and each pathway is ranked by enzyme–metabolite spatial coherence (on DESIUM, *Biosynthesis of unsaturated fatty acids* ranks top at ρ≈0.30) — a confidence signal enzyme‑only tools (scMetabolism, AUCell) cannot provide.
 

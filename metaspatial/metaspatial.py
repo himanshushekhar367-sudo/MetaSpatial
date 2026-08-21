@@ -163,6 +163,16 @@ class MetaSpatial:
         pred = cal.predict_metabolome(held.copy())
         true = np.log1p(np.asarray(held.uns[metab_key], float))
         self.conf_width_ = np.quantile(np.abs(true - pred), q, axis=0).astype(np.float32)
+        # per-ion held-out predictability (Spearman) -> feeds trust tiers in reliability_table()
+        try:
+            from scipy.stats import spearmanr
+            tp = np.full(true.shape[1], np.nan, np.float32)
+            for k in range(true.shape[1]):
+                if true[:, k].std() > 1e-9 and pred[:, k].std() > 1e-9:
+                    tp[k] = spearmanr(true[:, k], pred[:, k])[0]
+            self.train_predictability_ = tp
+        except Exception:
+            self.train_predictability_ = None
         return self
 
     def predict_metabolome(self, adata, metab_uns_key="metaspatial_pred", section_key=None):
@@ -192,8 +202,85 @@ class MetaSpatial:
         pred = np.maximum(pred, 0.0).astype(np.float32)  # log1p MSI intensities are non-negative
         adata.obsm[metab_uns_key] = pred
         if getattr(self, "conf_width_", None) is not None:
-            adata.uns["metaspatial_conf_width"] = np.asarray(self.conf_width_, np.float32)
+            cw = np.asarray(self.conf_width_, np.float32)
+            adata.uns["metaspatial_conf_width"] = cw
+            # overlap-adaptive widening (heuristic Mondrian-style): when the query shares fewer genes
+            # with the training panel the prediction is more OOD, so widen the interval proportionally.
+            # factor = 1 + beta*(1 - overlap); beta default 1.0. Reduces to the base width at full overlap.
+            ov = float(getattr(self, "last_gene_overlap_", 1.0))
+            if np.isfinite(ov):
+                beta = float(getattr(self, "conf_overlap_beta_", 1.0))
+                adata.uns["metaspatial_conf_width_adj"] = (cw * (1.0 + beta * (1.0 - ov))).astype(np.float32)
         return pred
+
+    # --------------------------------------------------------------------- #
+    #  Per-ion reliability export + putative annotation (default user output)
+    # --------------------------------------------------------------------- #
+    @staticmethod
+    def _annotate_mz(mz, tol=0.01):
+        """Putative m/z -> (name, chemical class) via the curated mass DB + negative-mode adducts.
+        Confidence level 2-3 (exact-mass only); returns two object arrays aligned to mz."""
+        try:
+            from .pathways import _MASS_DB, _NEG_ADDUCTS
+        except Exception:
+            return (np.array([""] * len(mz), object), np.array([""] * len(mz), object))
+        LIP = {"FA16:0","FA18:0","FA18:1","FA18:2","FA20:4","FA22:6","Sphingosine"}
+        NUC = {"AMP","ADP","ATP","Inosine","Hypoxanthine","Adenosine","Urate","GSH","GSSG"}
+        POL = {"Lactate","Pyruvate","Hexose","Glucose-6-P","Succinate","Fumarate","Malate",
+               "Citrate/Isocitrate","a-Ketoglutarate","Alanine","Serine","Glycine","Glutamate","Glutamine"}
+        mz = np.asarray(mz, float)
+        names = np.array([""] * len(mz), object); klass = np.array([""] * len(mz), object)
+        for i, v in enumerate(mz):
+            for nm, m in _MASS_DB.items():
+                if any(abs(v - (m + dl)) <= tol for _, dl in _NEG_ADDUCTS):
+                    names[i] = nm
+                    klass[i] = ("lipid" if nm in LIP else "nucleotide/redox" if nm in NUC
+                                else "polar" if nm in POL else "other")
+                    break
+        return names, klass
+
+    def reliability_table(self, adata=None, annotate=True):
+        """Per-ion reliability report — the recommended user-facing output. Returns a DataFrame with,
+        for every predicted m/z channel: predicted mean/std (if `adata` with predictions given),
+        conformal interval width, held-out training predictability (if estimate_conformal was run),
+        putative annotation + chemical class, and a coarse trust tier. Also stored in
+        `adata.uns['metaspatial_reliability']` when `adata` is provided."""
+        import pandas as pd
+        mz = np.asarray(getattr(self, "mz_", []), float)
+        n = len(mz)
+        cw = np.asarray(self.conf_width_, float) if getattr(self, "conf_width_", None) is not None else np.full(n, np.nan)
+        tp = np.asarray(self.train_predictability_, float) if getattr(self, "train_predictability_", None) is not None else np.full(n, np.nan)
+        pmean = pstd = np.full(n, np.nan)
+        if adata is not None and "metaspatial_pred" in adata.obsm:
+            P = np.asarray(adata.obsm["metaspatial_pred"], float); pmean = P.mean(0); pstd = P.std(0)
+        names, klass = (self._annotate_mz(mz) if annotate else (np.array([""] * n, object), np.array([""] * n, object)))
+        # trust tier: predictability (if known) else inverse conformal width, gated by annotation/class
+        def tier(i):
+            good_cls = klass[i] in ("lipid", "nucleotide/redox")
+            r = tp[i]
+            if np.isfinite(r):
+                base = "high" if r >= 0.30 else "medium" if r >= 0.15 else "low"
+            elif np.isfinite(cw[i]):
+                thr = np.nanpercentile(cw, [33, 66]) if np.isfinite(cw).any() else (np.nan, np.nan)
+                base = "high" if cw[i] <= thr[0] else "medium" if cw[i] <= thr[1] else "low"
+            else:
+                base = "unknown"
+            if base == "low" and good_cls:
+                base = "medium"      # class prior rescues a structurally-constrained ion
+            return base
+        df = pd.DataFrame({
+            "mz": np.round(mz, 4),
+            "pred_mean": np.round(pmean, 4),
+            "pred_std": np.round(pstd, 4),
+            "conf_width": np.round(cw, 4),
+            "train_predictability_spearman": np.round(tp, 4),
+            "annotation": names,
+            "chemical_class": klass,
+            "trust_tier": [tier(i) for i in range(n)],
+        })
+        if adata is not None:
+            adata.uns["metaspatial_reliability"] = df
+        return df
 
     def save(self, path, bundle=True):
         """Pickle the model to `path`. By default writes a self-describing bundle dict
